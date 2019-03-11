@@ -1,8 +1,11 @@
 extern crate pkg_config;
+extern crate neon_build;
 
 use std::env;
 
 fn main() {
+    neon_build::setup(); // must be called in build.rs
+
     println!("cargo:rerun-if-env-changed=SODIUM_LIB_DIR");
     println!("cargo:rerun-if-env-changed=SODIUM_STATIC");
 

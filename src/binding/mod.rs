@@ -7,3 +7,4 @@ pub mod jni_lib;
 #[cfg(feature = "storage-zbox-wasm")]
 pub mod wasm;
 
+pub mod nodejs;

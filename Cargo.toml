@@ -63,6 +63,7 @@ storage-zbox-wasm = ["storage-zbox", "wasm-bindgen", "js-sys", "web-sys", "wee_a
 storage-zbox = ["http", "serde_json"]
 
 [dependencies]
+neon = "0.2.0"
 bytes = "0.4.10"
 cfg-if = "0.1.6"
 env_logger = "0.6.0"
@@ -103,3 +104,4 @@ rand_xorshift = "0.1.1"
 
 [build-dependencies]
 pkg-config = "0.3.14"
+neon-build = "0.2.0"
