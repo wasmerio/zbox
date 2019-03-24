@@ -1,10 +1,16 @@
+extern crate libflate;
 extern crate pkg_config;
+extern crate reqwest;
+extern crate tar;
 
 use std::env;
 
 fn main() {
     println!("cargo:rerun-if-env-changed=SODIUM_LIB_DIR");
     println!("cargo:rerun-if-env-changed=SODIUM_STATIC");
+
+    #[cfg(feature = "libsodium-bundled")]
+    download_and_install_libsodium();
 
     // add libsodium link options
     if let Ok(lib_dir) = env::var("SODIUM_LIB_DIR") {
@@ -28,4 +34,74 @@ fn main() {
             .probe("libsodium")
             .unwrap();
     }
+}
+
+#[cfg(all(feature = "libsodium-bundled", not(target_os = "windows")))]
+fn download_and_install_libsodium() {
+    use libflate::non_blocking::gzip::Decoder;
+    use std::io::{stderr, stdout, Write};
+    use std::path::{Path, PathBuf};
+    use std::process::Command;
+    use tar::Archive;
+    static LIBSODIUM_ZIP: &'static str = "https://download.libsodium.org/libsodium/releases/libsodium-1.0.17.tar.gz";
+    static LIBSODIUM_NAME: &'static str = "libsodium-1.0.17";
+
+    let response = reqwest::get(LIBSODIUM_ZIP).unwrap();
+    let decoder = Decoder::new(response);
+    let mut ar = Archive::new(decoder);
+
+    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let install_dir = out_dir.join("libsodium_install");
+    ar.unpack(&install_dir).unwrap();
+    assert!(&install_dir.exists());
+
+    let cwd = install_dir.join(LIBSODIUM_NAME);
+    assert!(&cwd.exists(), "Cannot find downloaded libsodium source.");
+
+    let prefix_dir = out_dir.join("libsodium");
+    let configure = cwd.join("./configure");
+    let output = Command::new(&configure)
+        .current_dir(&cwd)
+        .args(&[Path::new("--prefix"), &prefix_dir])
+        .output()
+        .expect("failed to execute configure");
+    stdout().write_all(&output.stdout).unwrap();
+    stderr().write_all(&output.stderr).unwrap();
+
+    let output = Command::new("make")
+        .current_dir(&cwd)
+        .output()
+        .expect("failed to execute make");
+    stdout().write_all(&output.stdout).unwrap();
+    stderr().write_all(&output.stderr).unwrap();
+
+    let output = Command::new("make")
+        .current_dir(&cwd)
+        .arg("check")
+        .output()
+        .expect("failed to execute make check");
+    stdout().write_all(&output.stdout).unwrap();
+    stderr().write_all(&output.stderr).unwrap();
+
+    let output = std::process::Command::new("make")
+        .current_dir(&cwd)
+        .arg("install")
+        .output()
+        .expect("failed to execute sudo make install");
+    stdout().write_all(&output.stdout).unwrap();
+    stderr().write_all(&output.stderr).unwrap();
+
+    let sodium_lib_dir = prefix_dir.join("lib");
+    assert!(
+        &sodium_lib_dir.exists(),
+        "libsodium lib directory was not created."
+    );
+
+    env::set_var("SODIUM_LIB_DIR", &sodium_lib_dir);
+    env::set_var("SODIUM_STATIC", "true");
+}
+
+#[cfg(all(feature = "libsodium-bundled", target_os = "windows"))]
+fn download_and_install_libsodium() {
+    unimplemented!()
 }
