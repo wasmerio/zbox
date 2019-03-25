@@ -47,53 +47,55 @@ fn download_and_install_libsodium() {
     use tar::Archive;
     static LIBSODIUM_ZIP: &'static str = "https://download.libsodium.org/libsodium/releases/libsodium-1.0.17.tar.gz";
     static LIBSODIUM_NAME: &'static str = "libsodium-1.0.17";
-
-    let response = reqwest::get(LIBSODIUM_ZIP).unwrap();
-    let decoder = Decoder::new(response);
-    let mut ar = Archive::new(decoder);
-
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     let install_dir = out_dir.join("libsodium_install");
-    ar.unpack(&install_dir).unwrap();
-    assert!(&install_dir.exists());
-
-    let cwd = install_dir.join(LIBSODIUM_NAME);
-    assert!(&cwd.exists(), "Cannot find downloaded libsodium source.");
-
+    let source_dir = install_dir.join(LIBSODIUM_NAME);
     let prefix_dir = out_dir.join("libsodium");
-    let configure = cwd.join("./configure");
-    let output = Command::new(&configure)
-        .current_dir(&cwd)
-        .args(&[Path::new("--prefix"), &prefix_dir])
-        .output()
-        .expect("failed to execute configure");
-    stdout().write_all(&output.stdout).unwrap();
-    stderr().write_all(&output.stderr).unwrap();
-
-    let output = Command::new("make")
-        .current_dir(&cwd)
-        .output()
-        .expect("failed to execute make");
-    stdout().write_all(&output.stdout).unwrap();
-    stderr().write_all(&output.stderr).unwrap();
-
-    let output = Command::new("make")
-        .current_dir(&cwd)
-        .arg("check")
-        .output()
-        .expect("failed to execute make check");
-    stdout().write_all(&output.stdout).unwrap();
-    stderr().write_all(&output.stderr).unwrap();
-
-    let output = std::process::Command::new("make")
-        .current_dir(&cwd)
-        .arg("install")
-        .output()
-        .expect("failed to execute sudo make install");
-    stdout().write_all(&output.stdout).unwrap();
-    stderr().write_all(&output.stderr).unwrap();
-
     let sodium_lib_dir = prefix_dir.join("lib");
+
+    if !install_dir.exists() {
+        let response = reqwest::get(LIBSODIUM_ZIP).unwrap();
+        let decoder = Decoder::new(response);
+        let mut ar = Archive::new(decoder);
+        ar.unpack(&install_dir).unwrap();
+        assert!(&install_dir.exists());
+        assert!(&source_dir.exists(), "Cannot find downloaded libsodium source.");
+    }
+
+    if !sodium_lib_dir.exists() {
+        let configure = source_dir.join("./configure");
+        let output = Command::new(&configure)
+            .current_dir(&source_dir)
+            .args(&[Path::new("--prefix"), &prefix_dir])
+            .output()
+            .expect("failed to execute configure");
+        stdout().write_all(&output.stdout).unwrap();
+        stderr().write_all(&output.stderr).unwrap();
+
+        let output = Command::new("make")
+            .current_dir(&source_dir)
+            .output()
+            .expect("failed to execute make");
+        stdout().write_all(&output.stdout).unwrap();
+        stderr().write_all(&output.stderr).unwrap();
+
+        let output = Command::new("make")
+            .current_dir(&source_dir)
+            .arg("check")
+            .output()
+            .expect("failed to execute make check");
+        stdout().write_all(&output.stdout).unwrap();
+        stderr().write_all(&output.stderr).unwrap();
+
+        let output = std::process::Command::new("make")
+            .current_dir(&source_dir)
+            .arg("install")
+            .output()
+            .expect("failed to execute sudo make install");
+        stdout().write_all(&output.stdout).unwrap();
+        stderr().write_all(&output.stderr).unwrap();
+    }
+
     assert!(
         &sodium_lib_dir.exists(),
         "libsodium lib directory was not created."
