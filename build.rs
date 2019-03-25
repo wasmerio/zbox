@@ -6,11 +6,13 @@ extern crate tar;
 use std::env;
 
 fn main() {
-    println!("cargo:rerun-if-env-changed=SODIUM_LIB_DIR");
-    println!("cargo:rerun-if-env-changed=SODIUM_STATIC");
-
     #[cfg(feature = "libsodium-bundled")]
     download_and_install_libsodium();
+
+    #[cfg(not(feature = "libsodium-bundled"))] {
+        println!("cargo:rerun-if-env-changed=SODIUM_LIB_DIR");
+        println!("cargo:rerun-if-env-changed=SODIUM_STATIC");
+    }
 
     // add libsodium link options
     if let Ok(lib_dir) = env::var("SODIUM_LIB_DIR") {
