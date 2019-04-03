@@ -106,6 +106,4 @@ fn download_and_install_libsodium() {
 }
 
 #[cfg(all(feature = "libsodium-bundled", target_os = "windows"))]
-fn download_and_install_libsodium() {
-    unimplemented!()
-}
+fn download_and_install_libsodium() {}
