@@ -106,4 +106,30 @@ fn download_and_install_libsodium() {
 }
 
 #[cfg(all(feature = "libsodium-bundled", target_os = "windows"))]
-fn download_and_install_libsodium() {}
+fn download_and_install_libsodium() {
+    use std::path::PathBuf;
+    use std::fs::File;
+    use std::fs;
+    use std::io;
+
+    static LIBSODIUM_ZIP: &'static str = "https://download.libsodium.org/libsodium/releases/libsodium-1.0.17-msvc.zip";
+    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let sodium_lib_dir = out_dir.join("libsodium");
+    let sodium_lib_file_path = sodium_lib_dir.join("libsodium.lib");
+    if !sodium_lib_file_path.exists() {
+        fs::create_dir(&sodium_lib_dir).unwrap();
+        let mut tmpfile = tempfile::tempfile().unwrap();
+        reqwest::get(LIBSODIUM_ZIP).unwrap().copy_to(&mut tmpfile).unwrap();
+        let mut zip = zip::ZipArchive::new(tmpfile).unwrap();
+        let mut lib = zip.by_name("x64/Release/v142/static/libsodium.lib").unwrap();
+        let mut libsodium_file = File::create(&sodium_lib_file_path).unwrap();
+        io::copy(&mut lib, &mut libsodium_file).unwrap();
+        assert!(&sodium_lib_file_path.exists(), "Cannot find downloaded libsodium source.");
+    }
+    assert!(
+        &sodium_lib_dir.exists(),
+        "libsodium lib directory was not created."
+    );
+    env::set_var("SODIUM_LIB_DIR", &sodium_lib_dir);
+    env::set_var("SODIUM_STATIC", "true");
+}
