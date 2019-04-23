@@ -111,8 +111,10 @@ fn download_and_install_libsodium() {
     use std::fs::File;
     use std::fs;
     use std::io;
-
-    static LIBSODIUM_ZIP: &'static str = "https://download.libsodium.org/libsodium/releases/libsodium-1.0.17-msvc.zip";
+    #[cfg(target_env = "msvc")]
+    static LIBSODIUM_ZIP: &'static str = "https://download.libsodium.org/libsodium/releases/libsodium-1.0.17-stable-msvc.zip";
+    #[cfg(target_env = "mingw")]
+    static LIBSODIUM_ZIP: &'static str = "https://download.libsodium.org/libsodium/releases/libsodium-1.0.17-stable-mingw.tar.gz";
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     let sodium_lib_dir = out_dir.join("libsodium");
     let sodium_lib_file_path = sodium_lib_dir.join("libsodium.lib");
